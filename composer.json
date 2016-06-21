@@ -8,7 +8,7 @@
 	],
  	"require": {
 		"php": ">=7",
-		"symfony/event-dispatcher": "2.*",
+		"symfony/event-dispatcher": "2.*"
    	},
 	"autoload":{
 		"psr-4":{
