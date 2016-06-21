@@ -12,8 +12,8 @@
    	},
 	"autoload":{
 		"psr-4":{
-			"Database\\":"src",
+			"Database\\":"src"
 		}
 	},
-	"minimum-stability": "stable",
+	"minimum-stability": "stable"
 }
