@@ -15,5 +15,5 @@
 			"Kerisy\\Database\\":"src"
 		}
 	},
-	"minimum-stability": "master"
+	"minimum-stability": "stable"
 }
