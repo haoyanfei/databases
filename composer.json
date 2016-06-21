@@ -1,0 +1,19 @@
+{
+    	"name": "haoyanfei/databases",
+	"authors":[
+		{
+		  "name" : "haoyanfei",
+		  "email" : "haoyanfei@outlook.com"
+		}
+	],
+ 	"require": {
+		"php": ">=7",
+		"symfony/event-dispatcher": "2.*",
+   	},
+	"autoload":{
+		"psr-4":{
+			"Database\\":"src",
+		}
+	},
+	"minimum-stability": "stable",
+}
