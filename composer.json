@@ -15,5 +15,5 @@
 			"Database\\":"src"
 		}
 	},
-	"minimum-stability": "stable"
+	"minimum-stability": "master"
 }
