@@ -12,7 +12,7 @@
    	},
 	"autoload":{
 		"psr-4":{
-			"Database\\":"src"
+			"Kerisy\\Database\\":"src"
 		}
 	},
 	"minimum-stability": "master"
