@@ -29,7 +29,7 @@ class PGModel extends Model
 
     public function setDatabaseConfigure()
     {
-        $this->configure = config('database')->get('pgsql');
+//        $this->configure = config('database')->get('pgsql');
 
     }
     public function __call($method, $parameters)

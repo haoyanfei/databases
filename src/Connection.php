@@ -9,6 +9,7 @@
 namespace Kerisy\Database;
 
 
+use Kerisy\Core\Exception;
 use Kerisy\Database\Expression\ExpressionBuilder;
 use Kerisy\Database\Debug\QueryDebugger;
 use Kerisy\Database\Event\Events;
@@ -139,7 +140,6 @@ class Connection
      */
     public function executeQuery($query, array $parameters = [], array $types = [])
     {
-
         $queryDebugger = $this->createQueryDebugger($query, $parameters, $types);
         if (!empty($parameters)) {
             $statement = $this->getDriverConnection()->prepare($query);
@@ -156,7 +156,7 @@ class Connection
         }
         $this->debugQuery($queryDebugger);
         if ($this->getDriverConnection()->errorCode() !== '00000') {
-            throw new \Exception($this->getDriverConnection()->errorInfo()[2]);
+            throw new Exception($this->getDriverConnection()->errorInfo()[2]);
         }
         return $statement;
     }
@@ -179,14 +179,14 @@ class Connection
         } else {
             $statement = $this->getDriverConnection();
             $affectedRows = $statement->exec($query);
+
         }
         $this->debugQuery($queryDebugger);
         if ($this->getDriverConnection()->errorCode() !== '00000') {
-            throw new \Exception($this->getDriverConnection()->errorInfo()[2]);
+            throw new Exception($this->getDriverConnection()->errorInfo()[2]);
         }
         return $affectedRows;
     }
-
 
     public function query(...$params)
     {
@@ -263,17 +263,36 @@ class Connection
 
     public function fetchAll()
     {
-        $table = $this->createQueryBuilder()->from($this->table);
-        $table = $this->format($table);
-        return $table->execute()->fetchAll(\PDO::FETCH_ASSOC);
+        $table = $this->createQueryBuilder()->select()->from($this->table);
+        $statement = $this->format($table)->execute();
+        if ($statement) {
+            return $statement->fetchAll(\PDO::FETCH_ASSOC);
+        } else {
+            return false;
+        }
     }
 
     public function fetchRow()
     {
-        $table = $this->createQueryBuilder()->from($this->table);
-        $table = $this->format($table);
-        return $table->execute()->fetch(\PDO::FETCH_ASSOC);
+        $table = $this->createQueryBuilder()->select()->from($this->table);
+        $statement = $this->format($table)->execute();
+        if ($statement) {
+            return $statement->fetch(\PDO::FETCH_ASSOC);
+        } else {
+            return false;
+        }
+    }
 
+    public function count()
+    {
+        $table = $this->createQueryBuilder()->select('count(*) as counter ')->from($this->table);
+        $statement = $this->format($table)->execute();
+        if ($statement) {
+            $res = $statement->fetch(\PDO::FETCH_ASSOC);
+            return $res['counter'];
+        } else {
+            return 0;
+        }
     }
 
     public function format(QueryBuilder $table):QueryBuilder
@@ -298,9 +317,10 @@ class Connection
         return $this;
     }
 
-    public function update($where, array $update)
+    public function update(array $update)
     {
-        $table = $this->createQueryBuilder()->where($where)->update($this->table);
+        $table = $this->createQueryBuilder()->update($this->table);
+        $table = $this->format($table);
 
         foreach ($update as $k => $v) {
             if ($v !== '') {

@@ -28,7 +28,7 @@ class MySQLModel extends Model
 
     public function setDatabaseConfigure()
     {
-        $this->configure = config('database')->get('mysql');
+//        $this->configure = config('database')->get('mysql');
     }
 
 
