@@ -20,7 +20,9 @@ abstract class Model
 
     protected $table;
 
-    public $debug;
+    public $debug = false;
+    public $primary_key = 'id';
+
 
     public function signton():Connection
     {

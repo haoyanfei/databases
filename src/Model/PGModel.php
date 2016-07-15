@@ -32,6 +32,7 @@ class PGModel extends Model
 //        $this->configure = config('database')->get('pgsql');
 
     }
+
     public function __call($method, $parameters)
     {
         return call_user_func_array([$this->signton(), $method], $parameters);
@@ -49,5 +50,10 @@ class PGModel extends Model
         $this->debug = $debug;
     }
 
+    public function lastInsertId()
+    {
+        $sequeue = $this->signton()->getTable() . '_'.$this->primary_key.'_seq';
+        return $this->signton()->getDriverConnection()->lastInsertId($sequeue);
+    }
 
 }

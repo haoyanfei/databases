@@ -49,5 +49,10 @@ class MySQLModel extends Model
         $this->debug = $debug;
     }
 
+    public function lastInsertId()
+    {
+        $this->lastInsertId();
+    }
+
 
 }
