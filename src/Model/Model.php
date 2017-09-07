@@ -15,7 +15,7 @@ use \Kerisy\Database\Connection;
 abstract class Model
 {
 
-    public static $connection;
+    public static $connection = [];
     public $configure;
 
     protected $table;
@@ -26,24 +26,34 @@ abstract class Model
 
     public function signton():Connection
     {
-        if (is_null(static::$connection)) {
+        $key = $this->getConfigureName() ?: 'default';
+        $key = md5($key);
+        $connection = isset(static::$connection[$key]) && static::$connection[$key]
+            ? static::$connection[$key] : null;
+
+        if (is_null($connection)) {
             $this->setDatabaseConfigure();
 
             $driver = $this->getDriver();
             $configure = new Configuration($this->debug);
 
             $configure->setParameters($this->configure);
-            static::$connection = new Connection($driver, $configure);
+            $connection = new Connection($driver, $configure);
+            static::$connection[$key] = $connection;
         }
-        static::$connection->setTable($this->table);
+        $connection->setTable($this->table);
 
-        return static::$connection;
+        return $connection;
+
     }
 
 
     abstract public function getDriver();
 
     abstract public function setDatabaseConfigure();
+
+    abstract public function getConfigureName();
+
 
     public function __call($method, $parameters)
     {

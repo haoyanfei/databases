@@ -311,6 +311,17 @@ class Connection
             return 0;
         }
     }
+    public function sum($query='')
+    {
+        $table = $this->createQueryBuilder()->select($query)->from($this->table);
+        $statement = $this->format($table)->execute();
+        if ($statement) {
+            $res = $statement->fetch(\PDO::FETCH_ASSOC);
+            return $res;
+        } else {
+            return 0;
+        }
+    }
 
     public function format(QueryBuilder $table):QueryBuilder
     {
@@ -357,7 +368,12 @@ class Connection
         }
         return $table->execute();
     }
-
+    public function setInc($field,$step=1) {
+        $table = $this->createQueryBuilder()->update($this->table);
+        $table = $this->format($table);
+        $table->set($field, $field.'+'.$step);
+        return $table->execute();
+    }
     public function insert(array $update)
     {
         $table = $this->createQueryBuilder()->insert($this->table);

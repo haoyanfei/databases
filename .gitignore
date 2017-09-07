@@ -1,1 +1,4 @@
+.idea/*
+vendor/*
 src/.DS_Store
+composer.lock

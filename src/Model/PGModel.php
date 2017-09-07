@@ -19,7 +19,7 @@ use Kerisy\Database\PGDriver;
  */
 class PGModel extends Model
 {
-    static public $connection = null;
+//    static public $connection = null;
 
 
     public function getDriver()
@@ -30,6 +30,11 @@ class PGModel extends Model
     public function setDatabaseConfigure()
     {
 //        $this->configure = config('database')->get('pgsql');
+
+    }
+
+    public function getConfigureName()
+    {
 
     }
 
@@ -52,7 +57,7 @@ class PGModel extends Model
 
     public function lastInsertId()
     {
-        $sequeue = $this->signton()->getTable() . '_'.$this->primary_key.'_seq';
+        $sequeue = $this->signton()->getTable() . '_' . $this->primary_key . '_seq';
         return $this->signton()->getDriverConnection()->lastInsertId($sequeue);
     }
 
