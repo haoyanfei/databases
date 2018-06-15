@@ -17,6 +17,7 @@ use Kerisy\Database\Event\QueryDebugEvent;
 
 class Connection
 {
+    use Util;
     protected $pdo;
     protected $connected;
 
@@ -133,6 +134,21 @@ class Connection
         return true;
     }
 
+    public function reconnect()
+    {
+        $this->connected = false;
+        //todo 尝试再次连接;
+        $this->setDriverConnection(
+            $this->getDriver()->connect(
+                $this->getConfiguration()->getParameters(),
+                $this->getUsername(),
+                $this->getPassword()
+            )
+        );
+        $this->connected = true;
+        return true;
+    }
+
     /**
      * Closes the connection with the database.
      */
@@ -150,6 +166,18 @@ class Connection
         return $this->connected;
     }
 
+    /**
+     * SQL 语句操作
+     * @param $sql
+     * @return mixed
+     * @throws Exception
+     */
+    public function execQuery($sql)
+    {
+        echo $sql . "\n";
+        return $this->executeQuery($sql)->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     /*
      * @param $query select * from on_hand where id =1  ||  SELECT * FROM foo WHERE id IN (:foo)
      * @param $parameters = ['foo'=>[1,2,3],'bar'=>1];
@@ -157,52 +185,70 @@ class Connection
      */
     public function executeQuery($query, array $parameters = [], array $types = [])
     {
-        $queryDebugger = $this->createQueryDebugger($query, $parameters, $types);
-        if (!empty($parameters)) {
-            $statement = $this->getDriverConnection()->prepare($query);
+        try {
+            $queryDebugger = $this->createQueryDebugger($query, $parameters, $types);
+            if (!empty($parameters)) {
+                $statement = $this->getDriverConnection()->prepare($query);
 
-            if (!empty($types)) {
-                $this->bindStatementParameters($statement, $parameters, $types);
-                $statement->execute();
+                if (!empty($types)) {
+                    $this->bindStatementParameters($statement, $parameters, $types);
+                    $statement->execute();
+                } else {
+                    $statement->execute($parameters);
+                }
             } else {
-                $statement->execute($parameters);
-            }
-        } else {
-            $statement = $this->getDriverConnection()->query($query);
+                $statement = $this->getDriverConnection()->query($query);
 
+            }
+            $this->debugQuery($queryDebugger);
+
+            return $statement;
+        } catch (\Exception $e) {
+            $s1 = $this->causedByLostConnection($e->getMessage());
+            $error_msg = $this->getDriverConnection()->errorInfo()[2];
+            $s2 = $this->causedByLostConnection($error_msg);
+            if ($s1 || $s2) {
+                $this->reconnect();
+                return $this->executeQuery($query, $parameters, $types);
+            }
+            throw new Exception($error_msg);
         }
-        $this->debugQuery($queryDebugger);
-        if ($this->getDriverConnection()->errorCode() !== '00000') {
-            throw new Exception($this->getDriverConnection()->errorInfo()[2]);
-        }
-        return $statement;
     }
+
 
     public function executeUpdate($query, array $parameters = [], array $types = [])
     {
-        $queryDebugger = $this->createQueryDebugger($query, $parameters, $types);
-        if (!empty($parameters)) {
-            list($query, $parameters, $types) = $this->queryRewrite($query, $parameters, $types);
+        try {
+            $queryDebugger = $this->createQueryDebugger($query, $parameters, $types);
+            if (!empty($parameters)) {
+                list($query, $parameters, $types) = $this->queryRewrite($query, $parameters, $types);
 
-            $statement = $this->getDriverConnection()->prepare($query);
+                $statement = $this->getDriverConnection()->prepare($query);
 
-            if (!empty($types)) {
-                $this->bindStatementParameters($statement, $parameters, $types);
-                $statement->execute();
+                if (!empty($types)) {
+                    $this->bindStatementParameters($statement, $parameters, $types);
+                    $statement->execute();
+                } else {
+                    $statement->execute($parameters);
+                }
+                $affectedRows = $statement->rowCount();
             } else {
-                $statement->execute($parameters);
-            }
-            $affectedRows = $statement->rowCount();
-        } else {
-            $statement = $this->getDriverConnection();
-            $affectedRows = $statement->exec($query);
+                $statement = $this->getDriverConnection();
+                $affectedRows = $statement->exec($query);
 
+            }
+            $this->debugQuery($queryDebugger);
+            return $affectedRows;
+        } catch (\Exception $e) {
+            $s1 = $this->causedByLostConnection($e->getMessage());
+            $error_msg = $this->getDriverConnection()->errorInfo()[2];
+            $s2 = $this->causedByLostConnection($error_msg);
+            if ($s1 || $s2) {
+                $this->reconnect();
+                return $this->executeUpdate($query, $parameters, $types);
+            }
+            throw new Exception($error_msg);
         }
-        $this->debugQuery($queryDebugger);
-        if ($this->getDriverConnection()->errorCode() !== '00000') {
-            throw new Exception($this->getDriverConnection()->errorInfo()[2]);
-        }
-        return $affectedRows;
     }
 
     public function query(...$params)
@@ -311,17 +357,6 @@ class Connection
             return 0;
         }
     }
-    public function sum($query='')
-    {
-        $table = $this->createQueryBuilder()->select($query)->from($this->table);
-        $statement = $this->format($table)->execute();
-        if ($statement) {
-            $res = $statement->fetch(\PDO::FETCH_ASSOC);
-            return $res;
-        } else {
-            return 0;
-        }
-    }
 
     public function format(QueryBuilder $table):QueryBuilder
     {
@@ -331,10 +366,13 @@ class Connection
         foreach ($this->parts as $part) {
             $condition = $part[0];
             if ($condition == 'where' && (count($part[1]) > 1)) {//兼容处理
-                if (count($part[1]) == 2)
+                if (count($part[1]) == 2) {
+                    is_string($part[1][1]) && $part[1][1] = " '{$part[1][1]}'";
                     $value = $part[1][0] . '=' . $part[1][1];
-                elseif (count($part[1]) == 3)
+                } elseif (count($part[1]) == 3) {
+                    is_string($part[1][2]) && $part[1][2] = " '{$part[1][2]}'";
                     $value = $part[1][0] . $part[1][1] . $part[1][2];
+                }
             } else {
                 $value = $part[1][0];
             }
@@ -357,34 +395,20 @@ class Connection
     {
         $table = $this->createQueryBuilder()->update($this->table);
         $table = $this->format($table);
-
         foreach ($update as $k => $v) {
-            if ($v !== '') {
-                if (is_string($v)) {
-                    $v = " '$v' ";
-                }
-                $table->set($k, $v);
-            }
+            $table->set($k, $v);
         }
         return $table->execute();
     }
-    public function setInc($field,$step=1) {
-        $table = $this->createQueryBuilder()->update($this->table);
-        $table = $this->format($table);
-        $table->set($field, $field.'+'.$step);
-        return $table->execute();
-    }
+
     public function insert(array $update)
     {
         $table = $this->createQueryBuilder()->insert($this->table);
+        $table = $this->format($table);
         foreach ($update as $k => $v) {
-            if ($v !== '') {
-                if (is_string($v)) {
-                    $v = " '$v' ";
-                }
-                $table->set($k, $v);
-            }
+            $table->set($k, $v);
         }
+
         return $table->execute();
     }
 
@@ -571,6 +595,29 @@ class Connection
     public function inTransaction()
     {
         return $this->transactionLevel !== 0;
+    }
+
+    public function sum($fields = [])
+    {
+        if (empty($fields)) {
+            return [];
+        }
+
+        // 组装 求和数据
+        $select = [];
+        foreach ($fields as $field) {
+            array_push($select, " SUM({$field}) as {$field}");
+        }
+
+        $select = implode(',', $select);
+
+        $table = $this->createQueryBuilder()->select($select)->from($this->table);
+
+        $statement = $this->format($table)->execute();
+        if ($statement) {
+            return $statement->fetch(\PDO::FETCH_ASSOC);
+        }
+        return [];
     }
 
 

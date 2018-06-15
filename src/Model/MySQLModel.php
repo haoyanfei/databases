@@ -19,7 +19,7 @@ use Kerisy\Database\MySQLDriver;
  */
 class MySQLModel extends Model
 {
-    static public $connection = null;
+//    static public $connection = null;
 
     public function getDriver()
     {
@@ -31,6 +31,10 @@ class MySQLModel extends Model
 //        $this->configure = config('database')->get('mysql');
     }
 
+    public function getConfigureName()
+    {
+
+    }
 
     public function __call($method, $parameters)
     {
@@ -51,7 +55,8 @@ class MySQLModel extends Model
 
     public function lastInsertId()
     {
-        $this->lastInsertId();
+        //$this->lastInsertId();
+        return $this->signton()->getDriverConnection()->lastInsertId();
     }
 
 

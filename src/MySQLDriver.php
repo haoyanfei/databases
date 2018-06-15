@@ -38,7 +38,9 @@ class MySQLDriver implements DriverInterface
     public function connect(array $parameters, $username = null, $password = null, array $driverOptions = [])
     {
         $this->generateDSN($parameters);
-        return new PDOConnection($this->getDsn(), $username, $password, $driverOptions);
+        $pdo = new PDOConnection($this->getDsn(), $username, $password, $driverOptions);
+        $pdo->prepare("set session wait_timeout=90000,interactive_timeout=90000,net_read_timeout=90000")->execute();
+        return $pdo;
     }
 
     /**

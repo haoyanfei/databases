@@ -26,7 +26,7 @@ abstract class Model
 
     public function signton():Connection
     {
-        $key = $this->getConfigureName() ?: 'default';
+        $key = (new static)->getConfigureName() ?: 'default';
         $key = md5($key);
         $connection = isset(static::$connection[$key]) && static::$connection[$key]
             ? static::$connection[$key] : null;
@@ -42,9 +42,7 @@ abstract class Model
             static::$connection[$key] = $connection;
         }
         $connection->setTable($this->table);
-
         return $connection;
-
     }
 
 

@@ -9,8 +9,9 @@
 namespace Kerisy\Database;
 
 
+use Kerisy\Core\Exception;
 
-class ConnectionException extends \Exception
+class ConnectionException extends Exception
 {
     /**
      * Gets the "NO ACTIVE TRANSACTION" exception.
